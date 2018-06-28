@@ -1,19 +1,21 @@
+import atexit
 import configparser
 import os
 import sched
+import sys
 import threading
 import time
 from shutil import copyfile
-import atexit
 
 import discord
 from pyfirmata import Arduino
 
-import led_matrix
 import SysTrayIcon
+from led_matrix import LedMatrix
 
+REFRESH_RATE = 0.5  # seconds
 
-REFRESH_RATE = 250
+ZEROS = [[0 for _ in range(8)] for _ in range(8)]
 
 DISCONNECTED = [[1, 0, 0, 0, 0, 0, 0, 1],
                 [0, 1, 0, 0, 0, 0, 1, 0],
@@ -43,10 +45,37 @@ MUTED = DEAFENED = [[0, 0, 0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0, 0, 0]]
 
 
+class ExtendedMatrix(LedMatrix):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._matrix = ZEROS
+
+    def __eq__(self, other):
+        if isinstance(other, ExtendedMatrix):
+            return self._matrix == other._matrix
+        else:
+            return self._matrix == other
+
+    def clear(self):
+        super().clear()
+        self._matrix = ZEROS
+
+    def draw_matrix(self, point_matrix):
+        super().draw_matrix(point_matrix)
+        self._matrix = point_matrix
+
+    def composite_matrix(self, point_matrix):
+        """ Add points to an existing picture. """
+        new_matrix = [[self._matrix[x][y] | point_matrix[x][y] for y in range(8)] for x in range(8)]
+        self.draw_matrix(new_matrix)
+
 
 class DiscordListener:
     def __init__(self):
+        # Initialize client
         self.client = discord.Client()
+
+        # Try and find username and password from config file
         self.config = configparser.ConfigParser()
         if not os.path.isfile("config.ini"):
             copyfile("default.ini", "config.ini")
@@ -54,23 +83,30 @@ class DiscordListener:
         self.username = self.config['LoginInfo']['Username']
         self.password = self.config['LoginInfo']['Password']
 
+        # Initialze Arduino and LED-matrix
         board = Arduino('COM3')
-        self.matrix = led_matrix.LedMatrix(board)
+        self.matrix = ExtendedMatrix(board)
         self.matrix.setup()
 
+        # Will hold a reference to each running thread
         self.threads = {}
 
+        # Schedule update callback
         self.sched = sched.scheduler(time.time, time.sleep)
-        self.sched.enter(1, 1, self.update_status)
-        t_sched = threading.Thread(target=self.sched.run)
+        self.sched.enter(REFRESH_RATE, 1, self.update_status)
+        t_sched = threading.Thread(target=self.sched.run, daemon=True)
         t_sched.start()
         self.threads['t_sched'] = t_sched
 
-        def run_tray_icon(): SysTrayIcon.SysTrayIcon('eye.ico', 'DiscordMatrix', (), on_quit=lambda *_: self.exit())
-        t_tray = threading.Thread(target=run_tray_icon)
+        # Setup System Tray Icon
+        def run_tray_icon(): SysTrayIcon.SysTrayIcon('mat_icon.ico', 'DiscordMatrix', (),
+                                                     on_quit=lambda *_: self.exit())
+
+        t_tray = threading.Thread(target=run_tray_icon, daemon=False)
         t_tray.start()
         self.threads['t_tray'] = t_tray
 
+        # Finally, login to discord
         self.attempt_login()
 
     def update_status(self):
@@ -86,26 +122,30 @@ class DiscordListener:
                     else:
                         state = CONNECTED
                         break
-        self.matrix.draw_matrix(state)
-        self.sched.enter(1, 1, self.update_status)
+        if self.matrix != state:
+            self.matrix.draw_matrix(state)
+        self.sched.enter(REFRESH_RATE, 1, self.update_status)
 
     def attempt_login(self):
         print("Attempting to log in as {}...".format(self.username))
         # Kill the existing client thread if it already exists
         if self.threads.get("t_client"):
             self.client.logout()
-        t_client = threading.Thread(target=self.client.run, args=(self.username, self.password))
+        t_client = threading.Thread(target=self.client.run, args=(self.username, self.password), daemon=True)
         t_client.start()
         self.threads['t_client'] = t_client
+        print("Done")
 
     def exit(self):
+        print("Exiting...")
         self.matrix.clear()
-        os._exit(1)
+        sys.exit()
 
 
 def main():
     dl = DiscordListener()
     atexit.register(dl.exit)
+
 
 if __name__ == "__main__":
     main()

@@ -85,7 +85,7 @@ class LedMatrix:
             self.maxAll(e, 0)
 
     def setup(self):
-        print('Initializing matrix...')
+        print('Initializing _matrix...')
         self._digitalWrite(13, HIGH)
         self.maxAll(max7219_reg_scanLimit, 0x07)
         self.maxAll(max7219_reg_decodeMode, 0x00)
@@ -98,6 +98,7 @@ class LedMatrix:
     def draw_matrix(self, point_matrix):
         for c_id, pointlist in enumerate(point_matrix):
             self.maxSingle(c_id+1, int(''.join(str(v) for v in pointlist), 2))
+
 
 def loop(matrix):
     """ Verify that the functions work. """
