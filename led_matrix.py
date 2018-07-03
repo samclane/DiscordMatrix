@@ -28,7 +28,7 @@ max7219_reg_displayTest = 0x0f
 
 class LedMatrix:
     def __init__(self, board, dataIn, load, clock, maxInUse=1):
-        self.board = board
+        self._board = board
 
         self.pins = dict()
         self.pins['dataIn'] = dataIn
@@ -37,7 +37,7 @@ class LedMatrix:
         self.pins['maxInUse'] = maxInUse
 
     def _digitalWrite(self, pin, val):
-        self.board.digital[pin].write(val)
+        self._board.digital[pin].write(val)
 
     def _putByte(self, data):
         for i in range(8, 0, -1):
