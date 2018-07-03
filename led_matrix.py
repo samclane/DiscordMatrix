@@ -1,5 +1,5 @@
 """
-Code for MAX7218 from maxim
+Code for MAX7219 from Maxim
 Converted from this code: http://playground.arduino.cc/LEDMatrix/Max7219
 """
 
@@ -9,11 +9,6 @@ from pyfirmata import Arduino
 
 HIGH = 1
 LOW = 0
-
-dataIn = 2
-load = 4
-clock = 3
-maxInUse = 1
 
 max7219_reg_noop = 0x00
 max7219_reg_digit0 = 0x01
@@ -32,53 +27,54 @@ max7219_reg_displayTest = 0x0f
 
 
 class LedMatrix:
-    def __init__(self, board):
+    def __init__(self, board, pins=frozenset({"dataIn": 2, "load": 4, "clock": 3, "maxInUse": 1}.items())):
         self.board = board
+        self.pins = dict(pins)
 
     def _digitalWrite(self, pin, val):
         self.board.digital[pin].write(val)
 
-    def putByte(self, data):
+    def _putByte(self, data):
         for i in range(8, 0, -1):
             mask = 0x01 << (i - 1)
-            self._digitalWrite(clock, LOW)
-            if (data & mask):
-                self._digitalWrite(dataIn, HIGH)
+            self._digitalWrite(self.pins["clock"], LOW)
+            if data & mask:
+                self._digitalWrite(self.pins["dataIn"], HIGH)
             else:
-                self._digitalWrite(dataIn, LOW)
-            self._digitalWrite(clock, HIGH)
+                self._digitalWrite(self.pins["dataIn"], LOW)
+            self._digitalWrite(self.pins["clock"], HIGH)
 
     def maxSingle(self, reg, col):
-        self._digitalWrite(load, LOW)
-        self.putByte(reg)
-        self.putByte(col)
-        self._digitalWrite(load, LOW)
-        self._digitalWrite(load, HIGH)
+        self._digitalWrite(self.pins["load"], LOW)
+        self._putByte(reg)
+        self._putByte(col)
+        self._digitalWrite(self.pins["load"], LOW)
+        self._digitalWrite(self.pins["load"], HIGH)
 
     def maxAll(self, reg, col):
-        self._digitalWrite(load, LOW)
-        for _ in range(1, maxInUse + 1):
-            self.putByte(reg)
-            self.putByte(col)
-        self._digitalWrite(load, LOW)
-        self._digitalWrite(load, HIGH)
+        self._digitalWrite(self.pins["load"], LOW)
+        for _ in range(1, self.pins["maxInUse"] + 1):
+            self._putByte(reg)
+            self._putByte(col)
+        self._digitalWrite(self.pins["load"], LOW)
+        self._digitalWrite(self.pins["load"], HIGH)
 
     def maxOne(self, maxNr, reg, col):
-        self._digitalWrite(load, LOW)
+        self._digitalWrite(self.pins["load"], LOW)
 
-        for _ in range(maxInUse, maxNr, -1):
-            self.putByte(0)
-            self.putByte(0)
+        for _ in range(self.pins["maxInUse"], maxNr, -1):
+            self._putByte(0)
+            self._putByte(0)
 
-        self.putByte(reg)
-        self.putByte(col)
+        self._putByte(reg)
+        self._putByte(col)
 
         for _ in range(maxNr - 1, 0, -1):
-            self.putByte(0)
-            self.putByte(0)
+            self._putByte(0)
+            self._putByte(0)
 
-        self._digitalWrite(load, LOW)
-        self._digitalWrite(load, HIGH)
+        self._digitalWrite(self.pins["load"], LOW)
+        self._digitalWrite(self.pins["load"], HIGH)
 
     def clear(self):
         for e in range(1, 9):
@@ -96,8 +92,8 @@ class LedMatrix:
         print('Done')
 
     def draw_matrix(self, point_matrix):
-        for c_id, pointlist in enumerate(point_matrix):
-            self.maxSingle(c_id+1, int(''.join(str(v) for v in pointlist), 2))
+        for col, pointlist in enumerate(point_matrix):
+            self.maxSingle(col + 1, int(''.join(str(v) for v in pointlist), 2))
 
 
 def loop(matrix):
