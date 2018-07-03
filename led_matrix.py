@@ -27,9 +27,14 @@ max7219_reg_displayTest = 0x0f
 
 
 class LedMatrix:
-    def __init__(self, board, pins=frozenset({"dataIn": 2, "load": 4, "clock": 3, "maxInUse": 1}.items())):
+    def __init__(self, board, dataIn, load, clock, maxInUse=1):
         self.board = board
-        self.pins = dict(pins)
+
+        self.pins = dict()
+        self.pins['dataIn'] = dataIn
+        self.pins['load'] = load
+        self.pins['clock'] = clock
+        self.pins['maxInUse'] = maxInUse
 
     def _digitalWrite(self, pin, val):
         self.board.digital[pin].write(val)
@@ -136,7 +141,7 @@ def loop(matrix):
 
 if __name__ == "__main__":
     board = Arduino('COM3')
-    matrix = LedMatrix(board)
+    matrix = LedMatrix(board, 2, 4, 3, 1)
     matrix.setup()
     while True:
         loop(matrix)
