@@ -34,7 +34,7 @@ class LedMatrix:
         self.pins['dataIn'] = dataIn
         self.pins['load'] = load
         self.pins['clock'] = clock
-        self.pins['maxInUse'] = maxInUse
+        self.maxInUse = maxInUse
 
     def _digitalWrite(self, pin, val):
         self._board.digital[pin].write(val)
@@ -58,7 +58,7 @@ class LedMatrix:
 
     def maxAll(self, reg, col):
         self._digitalWrite(self.pins["load"], LOW)
-        for _ in range(1, self.pins["maxInUse"] + 1):
+        for _ in range(0, self.maxInUse):
             self._putByte(reg)
             self._putByte(col)
         self._digitalWrite(self.pins["load"], LOW)
@@ -67,7 +67,7 @@ class LedMatrix:
     def maxOne(self, maxNr, reg, col):
         self._digitalWrite(self.pins["load"], LOW)
 
-        for _ in range(self.pins["maxInUse"], maxNr, -1):
+        for _ in range(self.maxInUse, maxNr, -1):
             self._putByte(0)
             self._putByte(0)
 
