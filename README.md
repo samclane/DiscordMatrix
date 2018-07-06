@@ -8,6 +8,13 @@ To install the dependencies, run `pip install -r requirements.txt`.
 
 To start the application, simply run `python discord_matrix.pyw` from the command line.
 
+The default pinout is:
+* dataIn = 2
+* load = 4
+* clock = 3
+
+These values can be changed in your `config.ini` which appears after running the code once. 
+
 # Current Legend
 
 | Status | Icon |
