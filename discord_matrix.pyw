@@ -85,7 +85,11 @@ class DiscordListener:
 
         # Initialze Arduino and LED-matrix
         board = Arduino('COM3')
-        self.matrix = ExtendedMatrix(board, 2, 4, 3, 1)
+        # grab pinout from config file
+        dataIn = int(self.config['Pins']['dataIn'])
+        load = int(self.config['Pins']['load'])
+        clock = int(self.config['Pins']['clock'])
+        self.matrix = ExtendedMatrix(board, dataIn, load, clock, 1)
         self.matrix.setup()
 
         # Will hold a reference to each running thread
