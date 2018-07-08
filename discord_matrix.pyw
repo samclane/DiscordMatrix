@@ -11,38 +11,10 @@ import discord
 from pyfirmata import Arduino
 
 import SysTrayIcon
+from icons import *
 from led_matrix import LedMatrix
 
 REFRESH_RATE = 0.5  # seconds
-
-ZEROS = [[0 for _ in range(8)] for _ in range(8)]
-
-DISCONNECTED = [[1, 0, 0, 0, 0, 0, 0, 1],
-                [0, 1, 0, 0, 0, 0, 1, 0],
-                [0, 0, 1, 0, 0, 1, 0, 0],
-                [0, 0, 0, 1, 1, 0, 0, 0],
-                [0, 0, 0, 1, 1, 0, 0, 0],
-                [0, 0, 1, 0, 0, 1, 0, 0],
-                [0, 1, 0, 0, 0, 0, 1, 0],
-                [1, 0, 0, 0, 0, 0, 0, 1]]
-
-CONNECTED = [[0, 0, 0, 0, 0, 0, 0, 0],
-             [0, 0, 0, 0, 0, 0, 0, 0],
-             [0, 0, 0, 0, 0, 0, 0, 1],
-             [0, 0, 0, 0, 0, 0, 1, 0],
-             [0, 0, 0, 0, 0, 1, 0, 0],
-             [1, 0, 0, 0, 1, 0, 0, 0],
-             [0, 1, 0, 1, 0, 0, 0, 0],
-             [0, 0, 1, 0, 0, 0, 0, 0]]
-
-MUTED = DEAFENED = [[0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 1, 0, 0, 1, 0, 0],
-                    [0, 0, 0, 1, 1, 0, 0, 0],
-                    [0, 0, 0, 1, 1, 0, 0, 0],
-                    [0, 0, 1, 0, 0, 1, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0]]
 
 
 class ExtendedMatrix(LedMatrix):
@@ -66,9 +38,13 @@ class ExtendedMatrix(LedMatrix):
 
     def composite_matrix(self, point_matrix):
         """ Add points to an existing picture. """
-        new_matrix = [[self._matrix[x][y] | point_matrix[x][y] for y in range(8)] for x in range(8)]
+        new_matrix = [[int(self._matrix[x][y]) | int(point_matrix[x][y]) for y in range(8)] for x in range(8)]
         self.draw_matrix(new_matrix)
 
+    def erase_matrix(self, point_matrix):
+        """ Remove points from an existing picture. """
+        new_matrix = [["0" if (int(self._matrix[x][y]) & int(point_matrix[x][y])) else self._matrix[x][y] for y in range(8)] for x in range(8)]
+        self.draw_matrix(new_matrix)
 
 class DiscordListener:
     def __init__(self):
@@ -120,7 +96,10 @@ class DiscordListener:
                 mem = server.get_member(self.client.user.id)
                 vs = mem.voice
                 if vs.voice_channel is not None:
-                    if vs.mute or vs.self_mute:
+                    if vs.deaf or vs.self_deaf:
+                        state = DEAFENED
+                        break
+                    elif vs.mute or vs.self_mute:
                         state = MUTED
                         break
                     else:
