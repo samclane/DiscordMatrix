@@ -131,4 +131,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            main()
+        except:
+            pass
+        else:
+            break
