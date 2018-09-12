@@ -6,6 +6,7 @@ import sys
 import threading
 import time
 from shutil import copyfile
+import numpy as np
 
 import discord
 from pyfirmata import Arduino
@@ -21,6 +22,8 @@ class ExtendedMatrix(LedMatrix):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._matrix = ZEROS
+        self._buffer = None
+        self.state = None
 
     def __eq__(self, other):
         if isinstance(other, ExtendedMatrix):
@@ -41,10 +44,20 @@ class ExtendedMatrix(LedMatrix):
         new_matrix = [[int(self._matrix[x][y]) | int(point_matrix[x][y]) for y in range(8)] for x in range(8)]
         self.draw_matrix(new_matrix)
 
-    def erase_matrix(self, point_matrix):
+    def subtract_matrix(self, point_matrix):
         """ Remove points from an existing picture. """
-        new_matrix = [["0" if (int(self._matrix[x][y]) & int(point_matrix[x][y])) else self._matrix[x][y] for y in range(8)] for x in range(8)]
+        new_matrix = [
+            ["0" if (int(self._matrix[x][y]) & int(point_matrix[x][y])) else self._matrix[x][y] for y in range(8)] for x
+            in range(8)]
         self.draw_matrix(new_matrix)
+
+    def shift_left(self):
+        mat = np.roll(self._matrix, -1, axis=1)
+        if self._buffer:
+            mat[-1] = self._buffer[0]
+            self._buffer = np.roll(self._buffer, -1, axis=1)
+        self.draw_matrix(mat)
+
 
 class DiscordListener:
     def __init__(self):
@@ -105,8 +118,10 @@ class DiscordListener:
                     else:
                         state = CONNECTED
                         break
-        if self.matrix != state:
+        if self.matrix.state != state:
+            self.matrix.state = state
             self.matrix.draw_matrix(state)
+        self.matrix.shift_left()
         self.sched.enter(REFRESH_RATE, 1, self.update_status)
 
     def attempt_login(self):
