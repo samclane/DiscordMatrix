@@ -19,7 +19,7 @@ These values can be changed in your `config.ini` which appears after running the
 
 | Status | Icon |
 | ------ | :----: |
-| Disconnected | <img src="./images/disconnected.png" alt="disconnected" width="200px" height="200px"/> |
+| Disconnected | 12-Hour Clock Marquee |
 | Connected | <img src="./images/connected.png" alt="connected" width="200px" height="200px"/> |
 | Muted |  <img src="./images/muted.png" alt="muted" width="200px" height="200px"/> |
 | Deafened | <img src="./images/deafened.png" alt="deafened" width="200px" height="200px"/> |
