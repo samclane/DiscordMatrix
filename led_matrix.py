@@ -98,7 +98,7 @@ class LedMatrix:
 
     def draw_matrix(self, point_matrix):
         for col, pointlist in enumerate(point_matrix):
-            self.maxSingle(col + 1, int(''.join(str(v) for v in pointlist), 2))
+            self.maxSingle(col + 1, int(''.join(str(int(v)) for v in pointlist), 2))
 
 
 def loop(matrix):

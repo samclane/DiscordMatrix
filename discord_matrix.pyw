@@ -6,7 +6,7 @@ import sys
 import threading
 import time
 from shutil import copyfile
-import numpy as np
+from time import strftime
 
 import discord
 from pyfirmata import Arduino
@@ -22,7 +22,7 @@ class ExtendedMatrix(LedMatrix):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._matrix = ZEROS
-        self._buffer = None
+        self._buffer = ZEROS
         self.state = None
 
     def __eq__(self, other):
@@ -37,26 +37,36 @@ class ExtendedMatrix(LedMatrix):
 
     def draw_matrix(self, point_matrix):
         super().draw_matrix(point_matrix)
-        self._matrix = point_matrix
+        self._matrix = np.asarray(point_matrix, dtype=np.bool_)
 
     def composite_matrix(self, point_matrix):
         """ Add points to an existing picture. """
-        new_matrix = [[int(self._matrix[x][y]) | int(point_matrix[x][y]) for y in range(8)] for x in range(8)]
+        new_matrix = np.asarray([[int(self._matrix[x][y]) | int(point_matrix[x][y]) for y in range(8)] for x in range(8)], dtype=np.bool_)
         self.draw_matrix(new_matrix)
 
     def subtract_matrix(self, point_matrix):
         """ Remove points from an existing picture. """
-        new_matrix = [
+        new_matrix = np.asarray([
             ["0" if (int(self._matrix[x][y]) & int(point_matrix[x][y])) else self._matrix[x][y] for y in range(8)] for x
-            in range(8)]
+            in range(8)])
         self.draw_matrix(new_matrix)
 
     def shift_left(self):
+        """ Shifts current image left by 1 row """
         mat = np.roll(self._matrix, -1, axis=1)
-        if self._buffer:
-            mat[-1] = self._buffer[0]
+        if np.count_nonzero(self._buffer):
+            mat[:,-1] = self._buffer[:,0]
             self._buffer = np.roll(self._buffer, -1, axis=1)
+            self._buffer[:,-1] = np.zeros(8)
         self.draw_matrix(mat)
+
+    def write_string(self, string):
+        string += " "
+        for char in string:
+            sprite = icons[char]
+            self._buffer = sprite
+            while np.count_nonzero(self._buffer):
+                self.shift_left()
 
 
 class DiscordListener:
@@ -102,7 +112,7 @@ class DiscordListener:
         # Finally, login to discord
         self.attempt_login()
 
-    def update_status(self):
+    def get_client_state(self):
         state = DISCONNECTED
         if self.client.is_logged_in:
             for server in self.client.servers:
@@ -118,10 +128,17 @@ class DiscordListener:
                     else:
                         state = CONNECTED
                         break
+        return state
+
+    def update_status(self):
+        state = self.get_client_state()
         if self.matrix.state != state:
             self.matrix.state = state
-            self.matrix.draw_matrix(state)
-        self.matrix.shift_left()
+            if self.matrix.state != DISCONNECTED:
+                self.matrix.draw_matrix(state)
+        # self.matrix.shift_left()
+        if self.matrix.state == DISCONNECTED:
+            self.matrix.write_string(strftime("%I:%M"))
         self.sched.enter(REFRESH_RATE, 1, self.update_status)
 
     def attempt_login(self):
