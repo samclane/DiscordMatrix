@@ -60,13 +60,15 @@ class ExtendedMatrix(LedMatrix):
             self._buffer[:,-1] = np.zeros(8)
         self.draw_matrix(mat)
 
-    def write_string(self, string):
-        string += " "
+    def write_string(self, string, clear_after=False):
+        string += "."
         for char in string:
             sprite = icons[char]
             self._buffer = sprite
             while np.count_nonzero(self._buffer):
                 self.shift_left()
+        if clear_after:
+            self.clear()
 
 
 class DiscordListener:
@@ -136,9 +138,8 @@ class DiscordListener:
             self.matrix.state = state
             if self.matrix.state != DISCONNECTED:
                 self.matrix.draw_matrix(state)
-        # self.matrix.shift_left()
         if self.matrix.state == DISCONNECTED:
-            self.matrix.write_string(strftime("%I:%M"))
+            self.matrix.write_string(strftime("%I:%M"), clear_after=True)
         self.sched.enter(REFRESH_RATE, 1, self.update_status)
 
     def attempt_login(self):

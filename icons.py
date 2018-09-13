@@ -426,6 +426,15 @@ SEMICOLON = [[0, 0, 0, 0, 0, 0, 0, 0],
              [0, 0, 0, 1, 1, 0, 0, 0],
              [0, 0, 0, 0, 0, 0, 0, 0]]
 
+DOT = [[0, 0, 0, 0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0, 0, 0, 1]]
+
 icons = {name: np.asarray(eval(name), dtype=np.bool_) for name in dir()}
 for name in dir():
     icons[name.lower()] = np.asarray(eval(name), dtype=np.bool_)
@@ -435,3 +444,5 @@ for num, sprite in enumerate(numlist):
     icons[str(num)] = np.asarray(sprite, dtype=np.bool_)
 icons[':'] = np.asarray(SEMICOLON, dtype=np.bool_)
 icons[' '] = ZEROS
+icons['.'] = np.asarray(DOT, dtype=np.bool_)
+icons['!'] = np.asarray(EX, dtype=np.bool_)

@@ -93,7 +93,7 @@ class LedMatrix:
         self.maxAll(max7219_reg_shutdown, 0x01)
         self.maxAll(max7219_reg_displayTest, 0x00)
         self.clear()
-        self.maxAll(max7219_reg_intensity, 0x0f & 0x0f)
+        self.maxAll(max7219_reg_intensity, 0x01 & 0x0f)
         print('Done')
 
     def draw_matrix(self, point_matrix):
