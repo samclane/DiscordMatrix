@@ -6,6 +6,9 @@ Displays your Discord connection status on a MAX7219 LED Matrix, connected via A
 
 To install the dependencies, run `pip install -r requirements.txt`. 
 
+This program runs at 125000 baud, instead of PyFirmata's default 57600 bits/s. When uploading the FirmataStandard sketch
+to your Arduino, change line 774 to `Firmata.begin(125000);`.
+
 To start the application, simply run `python discord_matrix.pyw` from the command line.
 
 The default pinout is:

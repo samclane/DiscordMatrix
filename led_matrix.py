@@ -140,7 +140,7 @@ def loop(matrix):
 
 
 if __name__ == "__main__":
-    board = Arduino('COM3')
+    board = Arduino('COM3', baudrate=57600)
     matrix = LedMatrix(board, 2, 4, 3, 1)
     matrix.setup()
     while True:

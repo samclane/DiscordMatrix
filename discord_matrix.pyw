@@ -85,7 +85,7 @@ class DiscordListener:
         self.password = self.config['LoginInfo']['Password']
 
         # Initialze Arduino and LED-matrix
-        board = Arduino('COM3')
+        board = Arduino('COM3', baudrate=125000)
         # grab pinout from config file
         dataIn = int(self.config['Pins']['dataIn'])
         load = int(self.config['Pins']['load'])
