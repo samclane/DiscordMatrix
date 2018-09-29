@@ -1,3 +1,4 @@
 discord
 pyfirmata
 pywin32
+pyautogui

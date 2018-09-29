@@ -9,13 +9,16 @@ from shutil import copyfile
 from time import strftime
 
 import discord
-from pyfirmata import Arduino
+from pyautogui import hotkey
+from pyfirmata import Arduino, util, INPUT
 
 import SysTrayIcon
 from icons import *
 from led_matrix import LedMatrix
 
-REFRESH_RATE = 0.5  # seconds
+REFRESH_RATE = 0.1  # seconds
+SENSOR_COOLDOWN_MAX = 1  # seconds
+SENSOR_COOLDOWN = SENSOR_COOLDOWN_MAX
 
 
 class ExtendedMatrix(LedMatrix):
@@ -41,7 +44,8 @@ class ExtendedMatrix(LedMatrix):
 
     def composite_matrix(self, point_matrix):
         """ Add points to an existing picture. """
-        new_matrix = np.asarray([[int(self._matrix[x][y]) | int(point_matrix[x][y]) for y in range(8)] for x in range(8)], dtype=np.bool_)
+        new_matrix = np.asarray(
+            [[int(self._matrix[x][y]) | int(point_matrix[x][y]) for y in range(8)] for x in range(8)], dtype=np.bool_)
         self.draw_matrix(new_matrix)
 
     def subtract_matrix(self, point_matrix):
@@ -55,9 +59,9 @@ class ExtendedMatrix(LedMatrix):
         """ Shifts current image left by 1 row """
         mat = np.roll(self._matrix, -1, axis=1)
         if np.count_nonzero(self._buffer):
-            mat[:,-1] = self._buffer[:,0]
+            mat[:, -1] = self._buffer[:, 0]
             self._buffer = np.roll(self._buffer, -1, axis=1)
-            self._buffer[:,-1] = np.zeros(8)
+            self._buffer[:, -1] = np.zeros(8)
         self.draw_matrix(mat)
 
     def write_string(self, string, clear_after=False):
@@ -69,6 +73,24 @@ class ExtendedMatrix(LedMatrix):
                 self.shift_left()
         if clear_after:
             self.clear()
+
+
+class AvoidSensor:
+
+    def __init__(self, board, pin):
+        self._board = board
+        self.pin = pin
+
+        self.iter = util.Iterator(self._board)
+
+    def setup(self):
+        print("Initializing Avoid Sensor...")
+        self._board.digital[self.pin].mode = INPUT
+        self.iter.start()
+        print("Avoid Sensor Initialized")
+
+    def value(self):
+        return self._board.digital[self.pin].read()
 
 
 class DiscordListener:
@@ -84,6 +106,9 @@ class DiscordListener:
         self.username = self.config['LoginInfo']['Username']
         self.password = self.config['LoginInfo']['Password']
 
+        self.keybinds = {}
+        self.keybinds['mute'] = [w.lower() for w in self.config["Keybinds"]["mute"].split('+')]
+
         # Initialze Arduino and LED-matrix
         board = Arduino('COM3', baudrate=125000)
         # grab pinout from config file
@@ -92,6 +117,10 @@ class DiscordListener:
         clock = int(self.config['Pins']['clock'])
         self.matrix = ExtendedMatrix(board, dataIn, load, clock, 1)
         self.matrix.setup()
+
+        sensorPin = int(self.config['Pins']['sensor'])
+        self.sensor = AvoidSensor(board, sensorPin)
+        self.sensor.setup()
 
         # Will hold a reference to each running thread
         self.threads = {}
@@ -133,13 +162,19 @@ class DiscordListener:
         return state
 
     def update_status(self):
+        global SENSOR_COOLDOWN
         state = self.get_client_state()
         if self.matrix.state != state:
             self.matrix.state = state
             if self.matrix.state != DISCONNECTED:
                 self.matrix.draw_matrix(state)
         if self.matrix.state == DISCONNECTED:
-            self.matrix.write_string(strftime("%I:%M"), clear_after=True)
+            self.matrix.write_string(strftime("%I:%M"), clear_after=True)  # Huge blocking call. Should fix this.
+        if any([server.get_member(self.client.user.id).voice.voice_channel for server in
+                self.client.servers]) and not self.sensor.value() and not SENSOR_COOLDOWN:
+            hotkey(*self.keybinds['mute'])  # Want to mute here
+            SENSOR_COOLDOWN = SENSOR_COOLDOWN_MAX
+        SENSOR_COOLDOWN = max(SENSOR_COOLDOWN - REFRESH_RATE, 0)
         self.sched.enter(REFRESH_RATE, 1, self.update_status)
 
     def attempt_login(self):
