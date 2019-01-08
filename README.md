@@ -2,6 +2,11 @@
 
 Displays your Discord connection status on a MAX7219 LED Matrix, connected via Arduino.
 
+## Demo
+
+[![demo](http://img.youtube.com/vi/8EATN1kKPNI/0.jpg)](https://www.youtube.com/watch?v=8EATN1kKPNI)
+
+
 # Running the source code
 
 To install the dependencies, run `pip install -r requirements.txt`. 
